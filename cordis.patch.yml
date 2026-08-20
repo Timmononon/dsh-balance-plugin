@@ -1,0 +1,14 @@
+# DeepSeek balance WebUI bundle.
+# The host row owns the upstream request and injects a small, isolated widget
+# into the WebUI. The API key remains in DSH's credential provider.
+- insert:
+    - id: deepseek-balance
+      name: dsh-plugin-deepseek-balance
+      inject: [webServer, credentials]
+      config:
+        apiKeyEnv: DEEPSEEK_API_KEY
+        endpoint: https://api.deepseek.com/user/balance
+        cpaBaseUrl: http://127.0.0.1:8317
+        cpaManagementKeyEnv: CPA_MANAGEMENT_KEY
+        cacheSeconds: 30
+        refreshCooldownSeconds: 15

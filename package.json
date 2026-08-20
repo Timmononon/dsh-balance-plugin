@@ -1,0 +1,41 @@
+{
+  "name": "dsh-plugin-deepseek-balance",
+  "version": "0.7.0",
+  "description": "DeepSeek balance and CLIProxyAPI Codex quota widget for the DeepSeek Harness WebUI",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Timmononon/dsh-balance-plugin.git"
+  },
+  "homepage": "https://github.com/Timmononon/dsh-balance-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/Timmononon/dsh-balance-plugin/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "cliproxyapi",
+    "codex",
+    "quota"
+  ],
+  "license": "MIT"
+}
