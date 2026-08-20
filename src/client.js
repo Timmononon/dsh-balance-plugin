@@ -57,6 +57,10 @@ function showStale(container, error) {
   container.appendChild(el("div", "stale-notice", `更新失败，保留上次数据：${message}`));
 }
 
+export function clearKeyForms(container) {
+  for (const node of container.querySelectorAll(":scope > .key-box")) node.remove();
+}
+
 function renderDeepSeek(container, data) {
   container.replaceChildren();
   for (const item of data.balances || []) {
@@ -331,6 +335,7 @@ function mount() {
       const needsKey = ["credential_missing", "cpa_auth_blocked"].includes(error?.code) || [401, 403].includes(error?.status);
       if (hasCpaData) showStale(cpa, error);
       else showError(cpa, error);
+      clearKeyForms(cpa);
       if (needsKey) {
         cpa.appendChild(keyForm(() => queryCpa(true)));
       }

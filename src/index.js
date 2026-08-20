@@ -68,8 +68,8 @@ export function quotaWindow(value, label) {
   const rawReset = first(value.reset_at, value.resetAt);
   const after = Number(first(value.reset_after_seconds, value.resetAfterSeconds));
   let resetAt;
-  if (rawReset) resetAt = new Date(typeof rawReset === "number" && rawReset < 10_000_000_000 ? rawReset * 1000 : rawReset).toISOString();
-  else if (Number.isFinite(after)) resetAt = new Date(Date.now() + after * 1000).toISOString();
+  if (rawReset !== undefined && rawReset !== null && rawReset !== "") resetAt = dateValue(rawReset);
+  else if (Number.isFinite(after)) resetAt = dateValue(Date.now() + after * 1000);
   return { label, remainingPercent, resetAt };
 }
 
@@ -301,12 +301,13 @@ export function apply(ctx, config = {}) {
       accountLastRefresh.set(key, storedAt);
       const updated = value.accounts?.[0];
       if (updated && cpaCache) {
+        const { storedAt: fullStoredAt } = cpaCache;
         const existing = cpaCache.value.accounts || [];
         const found = existing.some((item) => String(item.id) === key);
         const accounts = found
           ? existing.map((item) => String(item.id) === key ? updated : item)
           : [...existing, updated];
-        cpaCache = { value: { ...cpaCache.value, accounts, checkedAt: value.checkedAt }, storedAt };
+        cpaCache = { value: { ...cpaCache.value, accounts }, storedAt: fullStoredAt };
       }
       return value;
     })().finally(() => { accountInFlight.delete(key); });

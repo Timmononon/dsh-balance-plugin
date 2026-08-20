@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-deepseek-balance",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "DeepSeek balance and CLIProxyAPI Codex quota widget for the DeepSeek Harness WebUI",
   "type": "module",
   "main": "src/index.js",

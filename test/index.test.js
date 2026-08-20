@@ -7,6 +7,7 @@ import {
   loopback,
   normalizeUsage,
   quotaLabel,
+  quotaWindow,
   sameOrigin,
 } from "../src/index.js";
 
@@ -61,6 +62,12 @@ test("周额度归一化为剩余百分比", () => {
   assert.equal(usage.windows[0].label, "周额度");
   assert.equal(usage.windows[0].remainingPercent, 77);
   assert.equal(usage.windows[0].resetAt, "2027-01-15T08:00:00.000Z");
+});
+
+test("非法重置时间不会丢掉有效额度", () => {
+  const quota = quotaWindow({ used_percent: 25, reset_at: "not-a-date" }, "周额度");
+  assert.equal(quota.remainingPercent, 75);
+  assert.equal(quota.resetAt, undefined);
 });
 
 test("从不同 CPA 字段解析订阅到期时间", () => {
@@ -120,5 +127,77 @@ test("普通请求使用缓存，refresh=1 可强制更新", async () => {
     assert.equal(JSON.parse(refreshed.body).balances[0].totalBalance, "2");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("单账号刷新不会延长全量 CPA 缓存", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalNow = Date.now;
+  let now = 1_000;
+  let listingCalls = 0;
+  Date.now = () => now;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith("/v0/management/auth-files")) {
+      listingCalls += 1;
+      return new Response(JSON.stringify({
+        files: [
+          { provider: "codex", auth_index: "a", email: "a@example.invalid" },
+          { provider: "codex", auth_index: "b", email: "b@example.invalid" },
+        ],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+
+    const call = JSON.parse(init.body);
+    return new Response(JSON.stringify({
+      status_code: 200,
+      body: JSON.stringify({
+        plan_type: "plus",
+        rate_limit: {
+          primary_window: { limit_window_seconds: 604800, used_percent: call.authIndex === "a" ? 10 : 20 },
+        },
+      }),
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    const route = pluginRoutes({ cacheSeconds: 30, refreshCooldownSeconds: 0 }).get("/deepseek-balance/cpa");
+    const request = (url) => ({ method: "GET", url, socket: { remoteAddress: "127.0.0.1" } });
+
+    await route(request("/deepseek-balance/cpa"), responseCapture());
+    now = 32_000;
+    await route(request("/deepseek-balance/cpa?account=a&refresh=1"), responseCapture());
+    now = 32_001;
+    await route(request("/deepseek-balance/cpa"), responseCapture());
+
+    assert.equal(listingCalls, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
+});
+
+test("重复认证错误只保留一个 CPA 密钥表单", async () => {
+  const originalDocument = globalThis.document;
+  globalThis.document = { readyState: "loading", addEventListener() {} };
+
+  try {
+    const { clearKeyForms } = await import("../src/client.js");
+    const removed = [];
+    const nodes = [
+      { remove() { removed.push("first"); } },
+      { remove() { removed.push("second"); } },
+    ];
+    const container = {
+      querySelectorAll(selector) {
+        assert.equal(selector, ":scope > .key-box");
+        return nodes;
+      },
+    };
+
+    clearKeyForms(container);
+    assert.deepEqual(removed, ["first", "second"]);
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
   }
 });
